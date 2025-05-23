@@ -4,6 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const connectDB = require('./config/database');
+const cors = require('cors');
 
 // Connect to database
 connectDB();
@@ -12,6 +13,12 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
 var app = express();
+
+// CORS configuration
+app.use(cors({
+    origin: 'http://localhost:5173', // Frontend URL
+    credentials: true
+}));
 
 // Middleware
 app.use(logger('dev'));
