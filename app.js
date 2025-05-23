@@ -11,6 +11,10 @@ connectDB();
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var postsRouter = require('./routes/posts');
+var commentsRouter = require('./routes/comments');
+var categoriesRouter = require('./routes/categories');
+var tagsRouter = require('./routes/tags');
 
 var app = express();
 
@@ -30,6 +34,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Routes
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/posts', postsRouter);
+app.use('/comments', commentsRouter);
+app.use('/categories', categoriesRouter);
+app.use('/tags', tagsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

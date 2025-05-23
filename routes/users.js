@@ -165,3 +165,4 @@ router.delete('/profile', auth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.authenticateJWT = auth;
