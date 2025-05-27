@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
-const { authenticateJWT } = require('./users');
+const { authenticateJWT, requireAdmin } = require('./users');
 
 // Lấy danh sách category
 router.get('/', async (req, res) => {
     try {
-        const categories = await Category.find();
+        const page = parseInt(req.query._page) || 1;
+        const limit = parseInt(req.query._limit) || 10;
+        const skip = (page - 1) * limit;
+        const total = await Category.countDocuments();
+        const categories = await Category.find().skip(skip).limit(limit);
+        res.set('Content-Range', `categories ${skip}-${skip + categories.length - 1}/${total}`);
         res.json(categories);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -14,7 +19,7 @@ router.get('/', async (req, res) => {
 });
 
 // Thêm category mới
-router.post('/', authenticateJWT, async (req, res) => {
+router.post('/', authenticateJWT, requireAdmin, async (req, res) => {
     try {
         const { name, description } = req.body;
         const category = new Category({ name, description });
@@ -26,7 +31,7 @@ router.post('/', authenticateJWT, async (req, res) => {
 });
 
 // Sửa category
-router.patch('/:id', authenticateJWT, async (req, res) => {
+router.patch('/:id', authenticateJWT, requireAdmin, async (req, res) => {
     try {
         const category = await Category.findById(req.params.id);
         if (!category) return res.status(404).json({ error: 'Category not found' });
@@ -40,7 +45,7 @@ router.patch('/:id', authenticateJWT, async (req, res) => {
 });
 
 // Xóa category
-router.delete('/:id', authenticateJWT, async (req, res) => {
+router.delete('/:id', authenticateJWT, requireAdmin, async (req, res) => {
     try {
         const category = await Category.findById(req.params.id);
         if (!category) return res.status(404).json({ error: 'Category not found' });

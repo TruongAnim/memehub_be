@@ -21,7 +21,8 @@ var app = express();
 // CORS configuration
 app.use(cors({
     origin: 'http://localhost:5173', // Frontend URL
-    credentials: true
+    credentials: true,
+    exposedHeaders: ['Content-Range']
 }));
 
 // Middleware

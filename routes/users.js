@@ -7,20 +7,31 @@ const jwt = require('jsonwebtoken');
 // Middleware để xác thực JWT token
 const auth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization').replace('Bearer ', '');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const token = req.header('Authorization');
+    console.log('Authorization header:', token);
+    if (!token) throw new Error('No token');
+    const realToken = token.replace('Bearer ', '');
+    const decoded = jwt.verify(realToken, process.env.JWT_SECRET);
     const user = await User.findOne({ _id: decoded.id });
-
+    console.log('Decoded user:', user);
     if (!user) {
-      throw new Error();
+      throw new Error('User not found');
     }
-
     req.user = user;
-    req.token = token;
+    req.token = realToken;
     next();
   } catch (error) {
+    console.error('Auth error:', error.message);
     res.status(401).json({ error: 'Please authenticate.' });
   }
+};
+
+// Middleware kiểm tra quyền admin
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+  next();
 };
 
 // Register new user
@@ -164,5 +175,38 @@ router.delete('/profile', auth, async (req, res) => {
   }
 });
 
+// Xóa user (admin hoặc chính mình)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({ error: 'Not allowed' });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    await user.remove();
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Lấy danh sách user (cho admin)
+router.get('/', auth, requireAdmin, async (req, res) => {
+  try {
+    console.log('User in /users:', req.user);
+    const page = parseInt(req.query._page) || 1;
+    const limit = parseInt(req.query._limit) || 10;
+    const skip = (page - 1) * limit;
+    const total = await User.countDocuments();
+    const users = await User.find().skip(skip).limit(limit);
+    res.set('Content-Range', `users ${skip}-${skip + users.length - 1}/${total}`);
+    res.json(users);
+  } catch (error) {
+    console.error('Error in GET /users:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
 module.exports.authenticateJWT = auth;
+module.exports.requireAdmin = requireAdmin;

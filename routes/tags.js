@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const Tag = require('../models/Tag');
-const { authenticateJWT } = require('./users');
+const { authenticateJWT, requireAdmin } = require('./users');
 
 // Lấy danh sách tag
 router.get('/', async (req, res) => {
     try {
-        const tags = await Tag.find();
+        const page = parseInt(req.query._page) || 1;
+        const limit = parseInt(req.query._limit) || 10;
+        const skip = (page - 1) * limit;
+        const total = await Tag.countDocuments();
+        const tags = await Tag.find().skip(skip).limit(limit);
+        res.set('Content-Range', `tags ${skip}-${skip + tags.length - 1}/${total}`);
         res.json(tags);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -14,7 +19,7 @@ router.get('/', async (req, res) => {
 });
 
 // Thêm tag mới
-router.post('/', authenticateJWT, async (req, res) => {
+router.post('/', authenticateJWT, requireAdmin, async (req, res) => {
     try {
         const { name } = req.body;
         const tag = new Tag({ name });
@@ -26,7 +31,7 @@ router.post('/', authenticateJWT, async (req, res) => {
 });
 
 // Sửa tag
-router.patch('/:id', authenticateJWT, async (req, res) => {
+router.patch('/:id', authenticateJWT, requireAdmin, async (req, res) => {
     try {
         const tag = await Tag.findById(req.params.id);
         if (!tag) return res.status(404).json({ error: 'Tag not found' });
@@ -39,7 +44,7 @@ router.patch('/:id', authenticateJWT, async (req, res) => {
 });
 
 // Xóa tag
-router.delete('/:id', authenticateJWT, async (req, res) => {
+router.delete('/:id', authenticateJWT, requireAdmin, async (req, res) => {
     try {
         const tag = await Tag.findById(req.params.id);
         if (!tag) return res.status(404).json({ error: 'Tag not found' });
