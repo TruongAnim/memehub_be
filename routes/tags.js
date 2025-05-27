@@ -21,8 +21,8 @@ router.get('/', async (req, res) => {
 // Thêm tag mới
 router.post('/', authenticateJWT, requireAdmin, async (req, res) => {
     try {
-        const { name } = req.body;
-        const tag = new Tag({ name });
+        const { name, slug, description } = req.body;
+        const tag = new Tag({ name, slug, description });
         await tag.save();
         res.status(201).json(tag);
     } catch (err) {
@@ -36,6 +36,8 @@ router.patch('/:id', authenticateJWT, requireAdmin, async (req, res) => {
         const tag = await Tag.findById(req.params.id);
         if (!tag) return res.status(404).json({ error: 'Tag not found' });
         if (req.body.name !== undefined) tag.name = req.body.name;
+        if (req.body.slug !== undefined) tag.slug = req.body.slug;
+        if (req.body.description !== undefined) tag.description = req.body.description;
         await tag.save();
         res.json(tag);
     } catch (err) {
