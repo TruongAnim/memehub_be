@@ -3,9 +3,17 @@ const router = express.Router();
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const { authenticateJWT } = require('./users'); // dùng middleware auth đã có
+const {
+    validatePostCreation,
+    validatePostUpdate,
+    validateCommentCreation,
+    validateVote,
+    validateMongoId,
+    validatePagination
+} = require('../middleware/validation');
 
 // Tạo post mới
-router.post('/', authenticateJWT, async (req, res) => {
+router.post('/', authenticateJWT, validatePostCreation, async (req, res) => {
     try {
         const { type, title, content, imageUrl, videoUrl, thumbnailUrl, videoWidth, videoHeight, categories, tags } = req.body;
         const post = new Post({
@@ -29,7 +37,7 @@ router.post('/', authenticateJWT, async (req, res) => {
 });
 
 // Lấy danh sách post (có phân trang, filter)
-router.get('/', async (req, res) => {
+router.get('/', validatePagination, async (req, res) => {
     try {
         const { page = 1, limit = 10, type, category, tag } = req.query;
         const filter = {};
@@ -50,7 +58,7 @@ router.get('/', async (req, res) => {
 });
 
 // Lấy chi tiết 1 post
-router.get('/:id', async (req, res) => {
+router.get('/:id', validateMongoId('id'), async (req, res) => {
     try {
         const post = await Post.findById(req.params.id)
             .populate('author', 'username')
@@ -68,10 +76,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // Upvote/Downvote post
-router.post('/:id/vote', authenticateJWT, async (req, res) => {
+router.post('/:id/vote', authenticateJWT, validateMongoId('id'), validateVote, async (req, res) => {
     try {
         const { value } = req.body; // 1: upvote, -1: downvote
-        if (![1, -1].includes(value)) return res.status(400).json({ error: 'Invalid vote value' });
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ error: 'Post not found' });
         // Remove previous vote if exists
@@ -86,7 +93,7 @@ router.post('/:id/vote', authenticateJWT, async (req, res) => {
 });
 
 // Thêm comment cho post
-router.post('/:id/comment', authenticateJWT, async (req, res) => {
+router.post('/:id/comment', authenticateJWT, validateMongoId('id'), validateCommentCreation, async (req, res) => {
     try {
         const { content, parent } = req.body;
         const post = await Post.findById(req.params.id);
@@ -107,7 +114,7 @@ router.post('/:id/comment', authenticateJWT, async (req, res) => {
 });
 
 // Sửa post
-router.patch('/:id', authenticateJWT, async (req, res) => {
+router.patch('/:id', authenticateJWT, validateMongoId('id'), validatePostUpdate, async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ error: 'Post not found' });
@@ -124,7 +131,7 @@ router.patch('/:id', authenticateJWT, async (req, res) => {
 });
 
 // Xóa post
-router.delete('/:id', authenticateJWT, async (req, res) => {
+router.delete('/:id', authenticateJWT, validateMongoId('id'), async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ error: 'Post not found' });

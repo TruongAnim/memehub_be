@@ -3,6 +3,14 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const {
+  validateUserRegistration,
+  validateUserLogin,
+  validateProfileUpdate,
+  validatePasswordChange,
+  validateMongoId,
+  validatePagination
+} = require('../middleware/validation');
 
 // Middleware để xác thực JWT token
 const auth = async (req, res, next) => {
@@ -35,7 +43,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 // Register new user
-router.post('/register', async (req, res) => {
+router.post('/register', validateUserRegistration, async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -75,7 +83,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login user
-router.post('/login', async (req, res) => {
+router.post('/login', validateUserLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -126,7 +134,7 @@ router.get('/profile', auth, async (req, res) => {
 });
 
 // Update user profile
-router.patch('/profile', auth, async (req, res) => {
+router.patch('/profile', auth, validateProfileUpdate, async (req, res) => {
   const updates = Object.keys(req.body);
   const allowedUpdates = ['username', 'email', 'bio', 'avatar'];
   const isValidOperation = updates.every(update => allowedUpdates.includes(update));
@@ -145,7 +153,7 @@ router.patch('/profile', auth, async (req, res) => {
 });
 
 // Change password
-router.post('/change-password', auth, async (req, res) => {
+router.post('/change-password', auth, validatePasswordChange, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
@@ -176,7 +184,7 @@ router.delete('/profile', auth, async (req, res) => {
 });
 
 // Xóa user (admin hoặc chính mình)
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, validateMongoId('id'), async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user._id.toString() !== req.params.id) {
       return res.status(403).json({ error: 'Not allowed' });
@@ -191,7 +199,7 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // Lấy danh sách user (cho admin)
-router.get('/', auth, requireAdmin, async (req, res) => {
+router.get('/', auth, requireAdmin, validatePagination, async (req, res) => {
   try {
     console.log('User in /users:', req.user);
     const page = parseInt(req.query._page) || 1;

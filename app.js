@@ -43,6 +43,38 @@ app.use('/tags', tagsRouter);
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
+
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+        const errors = Object.values(err.errors).map(error => ({
+            field: error.path,
+            message: error.message
+        }));
+        return res.status(400).json({
+            success: false,
+            error: 'Validation failed',
+            details: errors
+        });
+    }
+
+    // Handle duplicate key errors
+    if (err.code === 11000) {
+        const field = Object.keys(err.keyValue)[0];
+        return res.status(400).json({
+            success: false,
+            error: `${field} already exists`
+        });
+    }
+
+    // Handle cast errors (invalid ObjectId)
+    if (err.name === 'CastError') {
+        return res.status(400).json({
+            success: false,
+            error: 'Invalid ID format'
+        });
+    }
+
+    // Default error
     res.status(500).json({
         success: false,
         error: err.message || 'Server Error'

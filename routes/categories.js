@@ -2,9 +2,14 @@ const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
 const { authenticateJWT, requireAdmin } = require('./users');
+const {
+    validateCategoryCreation,
+    validateMongoId,
+    validatePagination
+} = require('../middleware/validation');
 
 // Lấy danh sách category
-router.get('/', async (req, res) => {
+router.get('/', validatePagination, async (req, res) => {
     try {
         const page = parseInt(req.query._page) || 1;
         const limit = parseInt(req.query._limit) || 10;
@@ -19,7 +24,7 @@ router.get('/', async (req, res) => {
 });
 
 // Thêm category mới
-router.post('/', authenticateJWT, requireAdmin, async (req, res) => {
+router.post('/', authenticateJWT, requireAdmin, validateCategoryCreation, async (req, res) => {
     try {
         const { name, description } = req.body;
         const category = new Category({ name, description });
@@ -31,7 +36,7 @@ router.post('/', authenticateJWT, requireAdmin, async (req, res) => {
 });
 
 // Sửa category
-router.patch('/:id', authenticateJWT, requireAdmin, async (req, res) => {
+router.patch('/:id', authenticateJWT, requireAdmin, validateMongoId('id'), validateCategoryCreation, async (req, res) => {
     try {
         const category = await Category.findById(req.params.id);
         if (!category) return res.status(404).json({ error: 'Category not found' });
@@ -45,7 +50,7 @@ router.patch('/:id', authenticateJWT, requireAdmin, async (req, res) => {
 });
 
 // Xóa category
-router.delete('/:id', authenticateJWT, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticateJWT, requireAdmin, validateMongoId('id'), async (req, res) => {
     try {
         const category = await Category.findById(req.params.id);
         if (!category) return res.status(404).json({ error: 'Category not found' });
