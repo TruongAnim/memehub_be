@@ -3,12 +3,16 @@ const router = express.Router();
 const Comment = require('../models/Comment');
 const Post = require('../models/Post');
 const { authenticateJWT } = require('./users');
+const {
+    validateCommentCreation,
+    validateVote,
+    validateMongoId
+} = require('../middleware/validation');
 
 // Upvote/Downvote comment
-router.post('/:id/vote', authenticateJWT, async (req, res) => {
+router.post('/:id/vote', authenticateJWT, validateMongoId('id'), validateVote, async (req, res) => {
     try {
         const { value } = req.body; // 1: upvote, -1: downvote
-        if (![1, -1].includes(value)) return res.status(400).json({ error: 'Invalid vote value' });
         const comment = await Comment.findById(req.params.id);
         if (!comment) return res.status(404).json({ error: 'Comment not found' });
         comment.votes = comment.votes.filter(v => v.user.toString() !== req.user.id);
@@ -21,7 +25,7 @@ router.post('/:id/vote', authenticateJWT, async (req, res) => {
 });
 
 // Trả lời comment
-router.post('/:id/reply', authenticateJWT, async (req, res) => {
+router.post('/:id/reply', authenticateJWT, validateMongoId('id'), validateCommentCreation, async (req, res) => {
     try {
         const { content } = req.body;
         const parentComment = await Comment.findById(req.params.id);
@@ -42,7 +46,7 @@ router.post('/:id/reply', authenticateJWT, async (req, res) => {
 });
 
 // Sửa comment
-router.patch('/:id', authenticateJWT, async (req, res) => {
+router.patch('/:id', authenticateJWT, validateMongoId('id'), validateCommentCreation, async (req, res) => {
     try {
         const comment = await Comment.findById(req.params.id);
         if (!comment) return res.status(404).json({ error: 'Comment not found' });
@@ -56,7 +60,7 @@ router.patch('/:id', authenticateJWT, async (req, res) => {
 });
 
 // Xóa comment
-router.delete('/:id', authenticateJWT, async (req, res) => {
+router.delete('/:id', authenticateJWT, validateMongoId('id'), async (req, res) => {
     try {
         const comment = await Comment.findById(req.params.id);
         if (!comment) return res.status(404).json({ error: 'Comment not found' });

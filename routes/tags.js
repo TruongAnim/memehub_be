@@ -2,9 +2,14 @@ const express = require('express');
 const router = express.Router();
 const Tag = require('../models/Tag');
 const { authenticateJWT, requireAdmin } = require('./users');
+const {
+    validateTagCreation,
+    validateMongoId,
+    validatePagination
+} = require('../middleware/validation');
 
 // Lấy danh sách tag
-router.get('/', async (req, res) => {
+router.get('/', validatePagination, async (req, res) => {
     try {
         const page = parseInt(req.query._page) || 1;
         const limit = parseInt(req.query._limit) || 10;
@@ -19,7 +24,7 @@ router.get('/', async (req, res) => {
 });
 
 // Thêm tag mới
-router.post('/', authenticateJWT, requireAdmin, async (req, res) => {
+router.post('/', authenticateJWT, requireAdmin, validateTagCreation, async (req, res) => {
     try {
         const { name, slug, description } = req.body;
         const tag = new Tag({ name, slug, description });
@@ -31,7 +36,7 @@ router.post('/', authenticateJWT, requireAdmin, async (req, res) => {
 });
 
 // Sửa tag
-router.patch('/:id', authenticateJWT, requireAdmin, async (req, res) => {
+router.patch('/:id', authenticateJWT, requireAdmin, validateMongoId('id'), validateTagCreation, async (req, res) => {
     try {
         const tag = await Tag.findById(req.params.id);
         if (!tag) return res.status(404).json({ error: 'Tag not found' });
@@ -46,7 +51,7 @@ router.patch('/:id', authenticateJWT, requireAdmin, async (req, res) => {
 });
 
 // Xóa tag
-router.delete('/:id', authenticateJWT, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticateJWT, requireAdmin, validateMongoId('id'), async (req, res) => {
     try {
         const tag = await Tag.findById(req.params.id);
         if (!tag) return res.status(404).json({ error: 'Tag not found' });
